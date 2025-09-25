@@ -467,308 +467,218 @@
     </div>
 
     <script>
-        // ============================================
-        // CONFIGURATION - EDIT THESE VALUES
-        // ============================================
-        
-        // Add your audio file URL here
-        const AUDIO_FILE_URL = "aud.mp3";
-        
-        // Schedule configuration (add more dates as needed)
-        const SCHEDULE = [
-            {
-                date: "2025-09-26", // YYYY-MM-DD format
-                time: "01:05",      // 24-hour format
-                title: "Morning Stream"
-            },
-            {
-                date: "2025-09-27", // YYYY-MM-DD format
-                time: "07:00",      // 24-hour format
-                title: "Morning Stream"
-            },
-            {
-                date: "2025-09-28", // YYYY-MM-DD format
-                time: "07:00",      // 24-hour format
-                title: "Morning Stream"
-            },
-            
-        ];
-        
-        // ============================================
-        // APPLICATION CODE (DO NOT EDIT BELOW)
-        // ============================================
-        
-        // DOM Elements
-        const digitalClock = document.getElementById('digitalClock');
-        const countdown = document.getElementById('countdown');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const statusText = document.getElementById('statusText');
-        const playBtn = document.getElementById('playBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const autoplayToggle = document.getElementById('autoplayToggle');
-        const headerVisualizer = document.getElementById('headerVisualizer');
-        const scheduleList = document.getElementById('scheduleList');
-        const currentStream = document.getElementById('currentStream');
-        
-        // Audio context and variables
-        let audioContext;
-        let audioElement;
-        let source;
-        let analyser;
-        let isPlaying = false;
-        let isScheduledStream = false;
-        let nextStreamTime = null;
-        let countdownInterval;
-        let currentStreamTitle = "";
-        
-        // Initialize the application
-        function init() {
-            updateDigitalClock();
-            setInterval(updateDigitalClock, 1000);
-            
-            setupAudio();
-            setupHeaderVisualizer();
-            populateSchedule();
-            calculateNextStream();
-            startCountdown();
-            
-            // Check if it's time to play the stream
-            setInterval(checkStreamTime, 1000);
+    // ============================================
+    // CONFIGURATION - EDIT THESE VALUES
+    // ============================================
+    const AUDIO_FILE_URL = "aud.mp3";
+    const SCHEDULE = [
+        { date: "2025-09-26", time: "01:10", title: "Morning Stream" },
+        { date: "2025-09-27", time: "07:00", title: "Morning Stream" },
+        { date: "2025-09-28", time: "07:00", title: "Morning Stream" },
+    ];
+
+    // ============================================
+    // APPLICATION CODE (DO NOT EDIT BELOW)
+    // ============================================
+    const digitalClock = document.getElementById('digitalClock');
+    const countdown = document.getElementById('countdown');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const statusText = document.getElementById('statusText');
+    const playBtn = document.getElementById('playBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const autoplayToggle = document.getElementById('autoplayToggle');
+    const headerVisualizer = document.getElementById('headerVisualizer');
+    const scheduleList = document.getElementById('scheduleList');
+    const currentStream = document.getElementById('currentStream');
+
+    let audioContext;
+    let audioElement;
+    let source;
+    let analyser;
+    let isPlaying = false;
+    let isScheduledStream = false;
+    let nextStreamTime = null;
+    let countdownInterval;
+    let currentStreamTitle = "";
+
+    function init() {
+        updateDigitalClock();
+        setInterval(updateDigitalClock, 1000);
+        setupAudio();
+        setupHeaderVisualizer();
+        populateSchedule();
+        calculateNextStream();
+        startCountdown();
+
+        // Disable play button until stream time
+        playBtn.disabled = true;
+        playBtn.style.opacity = "0.5";
+        playBtn.style.cursor = "not-allowed";
+
+        setInterval(checkStreamTime, 1000);
+    }
+
+    function updateDigitalClock() {
+        const now = new Date();
+        digitalClock.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+    }
+
+    function setupAudio() {
+        audioElement = new Audio(AUDIO_FILE_URL);
+        audioElement.loop = false;
+        audioElement.volume = volumeSlider.value / 100;
+
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        source = audioContext.createMediaElementSource(audioElement);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        source.connect(analyser);
+        analyser.connect(audioContext.destination);
+
+        audioElement.addEventListener('play', () => {
+            isPlaying = true;
+            playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            statusIndicator.className = 'on-air';
+            statusText.textContent = isScheduledStream ? 'ON AIR - LIVE' : 'ON AIR - MANUAL PLAY';
+            currentStream.textContent = isScheduledStream ? currentStreamTitle : "Manual Playback";
+            headerVisualizer.classList.add('active');
+        });
+
+        audioElement.addEventListener('pause', resetStreamStatus);
+        audioElement.addEventListener('ended', resetStreamStatus);
+
+        playBtn.addEventListener('click', togglePlayback);
+        volumeSlider.addEventListener('input', updateVolume);
+    }
+
+    function resetStreamStatus() {
+        isPlaying = false;
+        isScheduledStream = false;
+        playBtn.innerHTML = '<i class="fas fa-play"></i>';
+        statusIndicator.className = 'off-air';
+        statusText.textContent = 'OFF AIR';
+        currentStream.textContent = "No stream currently playing";
+        headerVisualizer.classList.remove('active');
+    }
+
+    function togglePlayback() {
+        if (audioContext.state === 'suspended') audioContext.resume();
+        if (isPlaying) audioElement.pause();
+        else {
+            isScheduledStream = false;
+            audioElement.play().catch(e => console.log("Playback error:", e));
         }
-        
-        // Update the digital clock
-        function updateDigitalClock() {
+    }
+
+    function updateVolume() {
+        audioElement.volume = volumeSlider.value / 100;
+    }
+
+    function setupHeaderVisualizer() {
+        for (let i = 0; i < 40; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'visualizer-bar';
+            bar.style.height = '5px';
+            headerVisualizer.appendChild(bar);
+        }
+        visualizeHeader();
+    }
+
+    function visualizeHeader() {
+        if (!isPlaying) {
+            document.querySelectorAll('.visualizer-bar').forEach(bar => bar.style.height = '5px');
+            requestAnimationFrame(visualizeHeader);
+            return;
+        }
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteFrequencyData(dataArray);
+
+        document.querySelectorAll('.visualizer-bar').forEach((bar, i) => {
+            const value = dataArray[i * 2] / 3;
+            bar.style.height = `${Math.max(5, value)}px`;
+        });
+
+        requestAnimationFrame(visualizeHeader);
+    }
+
+    function populateSchedule() {
+        scheduleList.innerHTML = '';
+        SCHEDULE.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'schedule-item';
+            const dateObj = new Date(`${item.date}T${item.time}`);
+            li.innerHTML = `
+                <div class="schedule-date">${dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} 
+                at ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+                <div class="schedule-title">${item.title}</div>`;
+            scheduleList.appendChild(li);
+        });
+    }
+
+    function calculateNextStream() {
+        const now = new Date();
+        for (let item of SCHEDULE) {
+            const streamTime = new Date(`${item.date}T${item.time}`);
+            if (streamTime > now) {
+                nextStreamTime = streamTime;
+                currentStreamTitle = item.title;
+                break;
+            }
+        }
+        if (!nextStreamTime) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(SCHEDULE[0].time.split(':')[0], SCHEDULE[0].time.split(':')[1], 0, 0);
+            nextStreamTime = tomorrow;
+            currentStreamTitle = SCHEDULE[0].title;
+        }
+    }
+
+    function startCountdown() {
+        clearInterval(countdownInterval);
+        countdownInterval = setInterval(() => {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
-            digitalClock.textContent = timeString;
-        }
-        
-        // Setup audio elements and event listeners
-        function setupAudio() {
-            audioElement = new Audio(AUDIO_FILE_URL);
-            audioElement.loop = false;
-            audioElement.volume = volumeSlider.value / 100;
-            
-            // Create audio context for visualization
-            audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            source = audioContext.createMediaElementSource(audioElement);
-            analyser = audioContext.createAnalyser();
-            analyser.fftSize = 256;
-            
-            source.connect(analyser);
-            analyser.connect(audioContext.destination);
-            
-            // Event listeners
-            audioElement.addEventListener('play', () => {
-                isPlaying = true;
-                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
-                
-                // Update status based on whether it's a scheduled stream or manual play
-                if (isScheduledStream) {
-                    statusIndicator.className = 'on-air';
-                    statusText.textContent = 'ON AIR - LIVE';
-                    currentStream.textContent = currentStreamTitle;
-                } else {
-                    statusIndicator.className = 'on-air';
-                    statusText.textContent = 'ON AIR - MANUAL PLAY';
-                    currentStream.textContent = "Manual Playback";
-                }
-                
-                // Activate header visualizer
-                headerVisualizer.classList.add('active');
-            });
-            
-            audioElement.addEventListener('pause', () => {
-                isPlaying = false;
-                playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                statusIndicator.className = 'off-air';
-                statusText.textContent = 'OFF AIR';
-                currentStream.textContent = "No stream currently playing";
-                
-                // Deactivate header visualizer
-                headerVisualizer.classList.remove('active');
-            });
-            
-            audioElement.addEventListener('ended', () => {
-                isPlaying = false;
-                isScheduledStream = false;
-                playBtn.innerHTML = '<i class="fas fa-play"></i>';
-                statusIndicator.className = 'off-air';
-                statusText.textContent = 'OFF AIR';
-                currentStream.textContent = "No stream currently playing";
-                
-                // Deactivate header visualizer
-                headerVisualizer.classList.remove('active');
-            });
-            
-            playBtn.addEventListener('click', togglePlayback);
-            volumeSlider.addEventListener('input', updateVolume);
-        }
-        
-        // Toggle audio playback
-        function togglePlayback() {
-            if (audioContext.state === 'suspended') {
-                audioContext.resume();
-            }
-            
-            if (isPlaying) {
-                audioElement.pause();
-                isScheduledStream = false;
-            } else {
-                // Manual play, not a scheduled stream
-                isScheduledStream = false;
-                audioElement.play().catch(e => {
-                    console.log("Playback error:", e);
-                });
-            }
-        }
-        
-        // Update volume based on slider
-        function updateVolume() {
-            audioElement.volume = volumeSlider.value / 100;
-        }
-        
-        // Setup header background visualizer
-        function setupHeaderVisualizer() {
-            // Create bars for header visualizer
-            for (let i = 0; i < 40; i++) {
-                const bar = document.createElement('div');
-                bar.className = 'visualizer-bar';
-                bar.style.height = '5px';
-                headerVisualizer.appendChild(bar);
-            }
-            
-            // Start visualization
-            visualizeHeader();
-        }
-        
-        // Header background visualization function
-        function visualizeHeader() {
-            if (!isPlaying) {
-                // Reset bars when not playing
-                const bars = document.querySelectorAll('.visualizer-bar');
-                bars.forEach(bar => {
-                    bar.style.height = '5px';
-                });
-                requestAnimationFrame(visualizeHeader);
+            const timeDiff = nextStreamTime - now;
+            if (timeDiff <= 0) {
+                countdown.textContent = "00:00:00";
+                clearInterval(countdownInterval);
                 return;
             }
-            
-            const bufferLength = analyser.frequencyBinCount;
-            const dataArray = new Uint8Array(bufferLength);
-            analyser.getByteFrequencyData(dataArray);
-            
-            const bars = document.querySelectorAll('.visualizer-bar');
-            for (let i = 0; i < bars.length; i++) {
-                // Use different frequency ranges for variety
-                const value = dataArray[i * 2] / 3;
-                bars[i].style.height = `${Math.max(5, value)}px`;
+            const h = Math.floor(timeDiff / 3600000).toString().padStart(2, '0');
+            const m = Math.floor((timeDiff % 3600000) / 60000).toString().padStart(2, '0');
+            const s = Math.floor((timeDiff % 60000) / 1000).toString().padStart(2, '0');
+            countdown.textContent = `${h}:${m}:${s}`;
+        }, 1000);
+    }
+
+    function checkStreamTime() {
+        const now = new Date();
+        if (nextStreamTime && Math.abs(nextStreamTime - now) < 10000 && !isPlaying) {
+            // ✅ Enable play button when stream starts
+            playBtn.disabled = false;
+            playBtn.style.opacity = "1";
+            playBtn.style.cursor = "pointer";
+
+            // ✅ Popup message once when stream starts
+            if (!window.streamPopupShown) {
+                window.streamPopupShown = true;
+                alert("🔊 Stream is live! Click the play button to listen.");
             }
-            
-            requestAnimationFrame(visualizeHeader);
-        }
-        
-        // Populate the schedule list
-        function populateSchedule() {
-            scheduleList.innerHTML = '';
-            
-            SCHEDULE.forEach(item => {
-                const listItem = document.createElement('li');
-                listItem.className = 'schedule-item';
-                
-                const dateObj = new Date(`${item.date}T${item.time}`);
-                const formattedDate = dateObj.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                });
-                const formattedTime = dateObj.toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                
-                listItem.innerHTML = `
-                    <div class="schedule-date">${formattedDate} at ${formattedTime}</div>
-                    <div class="schedule-title">${item.title}</div>
-                `;
-                
-                scheduleList.appendChild(listItem);
-            });
-        }
-        
-        // Calculate the next stream time
-        function calculateNextStream() {
-            const now = new Date();
-            
-            for (let item of SCHEDULE) {
-                const streamTime = new Date(`${item.date}T${item.time}`);
-                
-                if (streamTime > now) {
-                    nextStreamTime = streamTime;
-                    currentStreamTitle = item.title;
-                    break;
-                }
+
+            if (autoplayToggle.checked) {
+                isScheduledStream = true;
+                audioElement.play().catch(e => console.log("Autoplay prevented."));
             }
-            
-            // If no future streams found, use the first one from tomorrow
-            if (!nextStreamTime) {
-                const tomorrow = new Date();
-                tomorrow.setDate(tomorrow.getDate() + 1);
-                tomorrow.setHours(SCHEDULE[0].time.split(':')[0], SCHEDULE[0].time.split(':')[1], 0, 0);
-                nextStreamTime = tomorrow;
-                currentStreamTitle = SCHEDULE[0].title;
-            }
+            calculateNextStream();
+            startCountdown();
         }
-        
-        // Start the countdown timer
-        function startCountdown() {
-            clearInterval(countdownInterval);
-            
-            countdownInterval = setInterval(() => {
-                const now = new Date();
-                const timeDiff = nextStreamTime - now;
-                
-                if (timeDiff <= 0) {
-                    // Stream time has arrived
-                    countdown.textContent = "00:00:00";
-                    clearInterval(countdownInterval);
-                    return;
-                }
-                
-                const hours = Math.floor(timeDiff / (1000 * 60 * 60));
-                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
-                
-                countdown.textContent = 
-                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            }, 1000);
-        }
-        
-        // Check if it's time to play the stream
-        function checkStreamTime() {
-            const now = new Date();
-            
-            // Check if we're within 10 seconds of the stream time
-            if (nextStreamTime && Math.abs(nextStreamTime - now) < 10000 && !isPlaying) {
-                if (autoplayToggle.checked) {
-                    // This is a scheduled stream
-                    isScheduledStream = true;
-                    
-                    // Auto-play the stream
-                    audioElement.play().catch(e => {
-                        console.log("Autoplay prevented by browser. User interaction required.");
-                    });
-                }
-                
-                // Calculate next stream time
-                calculateNextStream();
-                startCountdown();
-            }
-        }
-        
-        // Initialize the application when the page loads
-        window.addEventListener('load', init);
-    </script>
+    }
+
+    window.addEventListener('load', init);
+</script>
+
 </body>
 </html>
