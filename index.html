@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ABHI.VOCOPEDIA STREAMING</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #00ffff;
+            --secondary: #ff00ff;
+            --accent: #ffff00;
+            --dark-bg: #0a0a1a;
+            --darker-bg: #050510;
+            --card-bg: rgba(15, 15, 35, 0.8);
+            --text: #ffffff;
+            --glow: 0 0 10px currentColor;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--darker-bg), var(--dark-bg));
+            color: var(--text);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+            border-radius: 15px;
+            background: rgba(10, 10, 30, 0.7);
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            transition: all 0.5s ease;
+        }
+
+        .header-bg-visualizer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 0 20px 20px;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: -1;
+        }
+
+        .header-bg-visualizer.active {
+            opacity: 0.7;
+        }
+
+        .visualizer-bar {
+            width: 100%;
+            max-width: 20px;
+            background: linear-gradient(to top, var(--primary), var(--secondary));
+            border-radius: 5px 5px 0 0;
+            transition: height 0.2s ease;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .logo {
+            font-size: 3.5rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: var(--glow);
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: var(--primary);
+            text-shadow: 0 0 5px var(--primary);
+            letter-spacing: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .on-air {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ff0000;
+            box-shadow: 0 0 10px #ff0000;
+            animation: pulse 1.5s infinite;
+        }
+
+        .off-air {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #555;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .digital-clock {
+            font-size: 1.5rem;
+            text-align: center;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            color: var(--accent);
+            text-shadow: 0 0 5px var(--accent);
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .card:hover::before {
+            left: 100%;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 255, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+            text-shadow: var(--glow);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: var(--secondary);
+        }
+
+        .countdown {
+            font-size: 2.5rem;
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 700;
+            color: var(--accent);
+            text-shadow: 0 0 10px var(--accent);
+        }
+
+        .countdown-label {
+            text-align: center;
+            font-size: 1rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .audio-player {
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .play-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .volume-slider {
+            width: 100%;
+            -webkit-appearance: none;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+            box-shadow: 0 0 5px var(--primary);
+        }
+
+        .autoplay-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .schedule-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .schedule-item {
+            padding: 15px;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .schedule-item:hover {
+            background: rgba(0, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .schedule-date {
+            font-weight: bold;
+            color: var(--accent);
+        }
+
+        .schedule-title {
+            margin-top: 5px;
+            color: var(--primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            border-top: 1px solid rgba(0, 255, 255, 0.3);
+            color: var(--primary);
+            font-size: 0.9rem;
+        }
+
+        .stream-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .current-stream {
+            font-size: 1.2rem;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .admin-access {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .admin-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, var(--secondary), var(--accent));
+            border: none;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .admin-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 0, 255, 0.8);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-bg-visualizer" id="headerVisualizer">
+                <!-- Visualizer bars will be generated by JavaScript -->
+            </div>
+            
+            <h1 class="logo">ABHI.VOCOPEDIA</h1>
+            <p class="tagline">Live Audio Experience • Daily Streams</p>
+            
+            <div class="status-container">
+                <div class="status-indicator">
+                    <span id="statusIndicator" class="off-air"></span>
+                    <span id="statusText">OFF AIR</span>
+                </div>
+            </div>
+            
+            <div class="digital-clock" id="digitalClock">00:00:00</div>
+        </header>
+
+        <div class="main-content">
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-broadcast-tower"></i> STREAM CONTROLS</h2>
+                
+                <div class="countdown-label">Next Stream In:</div>
+                <div class="countdown" id="countdown">00:00:00</div>
+                
+                <div class="stream-info">
+                    <div class="current-stream" id="currentStream">No stream currently playing</div>
+                </div>
+                
+                <div class="audio-player">
+                    <div class="player-controls">
+                        <button class="play-btn" id="playBtn">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        <div class="volume-control">
+                            <i class="fas fa-volume-up"></i>
+                            <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                        </div>
+                    </div>
+                    
+                    <div class="autoplay-toggle">
+                        <span>Auto-play next stream:</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoplayToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2 class="card-title"><i class="far fa-calendar-alt"></i> STREAM SCHEDULE</h2>
+                <ul class="schedule-list" id="scheduleList">
+                    <!-- Schedule items will be populated by JavaScript -->
+                </ul>
+            </div>
+        </div>
+        
+        <footer>
+            <p>ABHI.VOCOPEDIA STREAMING &copy; 2025 | ABHI's FM Since May 2025</p>
+        </footer>
+    </div>
+
+    <!-- Hidden admin button (remove this for production) -->
+    <div class="admin-access">
+        <button class="admin-btn" id="adminBtn" title="Admin Access">
+            <i class="fas fa-cog"></i>
+        </button>
+    </div>
+
+    <script>
+        // ============================================
+        // BACKEND CONFIGURATION - EDIT THESE VALUES
+        // ============================================
+        
+        // Add your audio file URL here (replace with your actual file path)
+        const AUDIO_FILE_URL = "aud.mp3";
+        
+        // Schedule configuration (add more dates as needed)
+        const SCHEDULE = [
+            {
+                date: "2025-09-26", // YYYY-MM-DD format
+                time: "07:00",      // 24-hour format
+                title: "Daily Stream"
+            },
+            {
+                date: "2025-09-27", // YYYY-MM-DD format
+                time: "07:00",      // 24-hour format
+                title: "Daily Stream"
+            },
+            {
+                date: "2025-09-28", // YYYY-MM-DD format
+                time: "07:00",      // 24-hour format
+                title: "Daily Stream"
+            },
+            {
+                date: "2025-09-29", // YYYY-MM-DD format
+                time: "07:00",      // 24-hour format
+                title: "Daily Stream"
+            },
+            
+        ];
+        
+        // ============================================
+        // AUDIENCE-FACING CODE (DO NOT EDIT BELOW)
+        // ============================================
+        
+        // DOM Elements
+        const digitalClock = document.getElementById('digitalClock');
+        const countdown = document.getElementById('countdown');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        const playBtn = document.getElementById('playBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const autoplayToggle = document.getElementById('autoplayToggle');
+        const headerVisualizer = document.getElementById('headerVisualizer');
+        const scheduleList = document.getElementById('scheduleList');
+        const currentStream = document.getElementById('currentStream');
+        const adminBtn = document.getElementById('adminBtn');
+        
+        // Audio context and variables
+        let audioContext;
+        let audioElement;
+        let source;
+        let analyser;
+        let isPlaying = false;
+        let isScheduledStream = false;
+        let nextStreamTime = null;
+        let countdownInterval;
+        let currentStreamTitle = "";
+        
+        // Initialize the application
+        function init() {
+            updateDigitalClock();
+            setInterval(updateDigitalClock, 1000);
+            
+            setupAudio();
+            setupHeaderVisualizer();
+            populateSchedule();
+            calculateNextStream();
+            startCountdown();
+            
+            // Check if it's time to play the stream
+            setInterval(checkStreamTime, 1000);
+            
+            // Admin button (remove this in production)
+            adminBtn.addEventListener('click', () => {
+                alert('Admin access would be implemented here. For now, edit the SCHEDULE and AUDIO_FILE_URL variables in the JavaScript code.');
+            });
+        }
+        
+        // Update the digital clock
+        function updateDigitalClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            digitalClock.textContent = timeString;
+        }
+        
+        // Setup audio elements and event listeners
+        function setupAudio() {
+            audioElement = new Audio(AUDIO_FILE_URL);
+            audioElement.loop = false;
+            audioElement.volume = volumeSlider.value / 100;
+            
+            // Create audio context for visualization
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            source = audioContext.createMediaElementSource(audioElement);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            
+            // Event listeners
+            audioElement.addEventListener('play', () => {
+                isPlaying = true;
+                playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+                
+                // Update status based on whether it's a scheduled stream or manual play
+                if (isScheduledStream) {
+                    statusIndicator.className = 'on-air';
+                    statusText.textContent = 'ON AIR - LIVE';
+                    currentStream.textContent = currentStreamTitle;
+                } else {
+                    statusIndicator.className = 'on-air';
+                    statusText.textContent = 'ON AIR - MANUAL PLAY';
+                    currentStream.textContent = "Manual Playback";
+                }
+                
+                // Activate header visualizer
+                headerVisualizer.classList.add('active');
+            });
+            
+            audioElement.addEventListener('pause', () => {
+                isPlaying = false;
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                statusIndicator.className = 'off-air';
+                statusText.textContent = 'OFF AIR';
+                currentStream.textContent = "No stream currently playing";
+                
+                // Deactivate header visualizer
+                headerVisualizer.classList.remove('active');
+            });
+            
+            audioElement.addEventListener('ended', () => {
+                isPlaying = false;
+                isScheduledStream = false;
+                playBtn.innerHTML = '<i class="fas fa-play"></i>';
+                statusIndicator.className = 'off-air';
+                statusText.textContent = 'OFF AIR';
+                currentStream.textContent = "No stream currently playing";
+                
+                // Deactivate header visualizer
+                headerVisualizer.classList.remove('active');
+            });
+            
+            //playBtn.addEventListener('click', togglePlayback);
+            volumeSlider.addEventListener('input', updateVolume);
+        }
+        
+        // Toggle audio playback
+        function togglePlayback() {
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            if (isPlaying) {
+                audioElement.pause();
+                isScheduledStream = false;
+            } else {
+                // Manual play, not a scheduled stream
+                isScheduledStream = false;
+                audioElement.play().catch(e => {
+                    console.log("Playback error:", e);
+                });
+            }
+        }
+        
+        // Update volume based on slider
+        function updateVolume() {
+            audioElement.volume = volumeSlider.value / 100;
+        }
+        
+        // Setup header background visualizer
+        function setupHeaderVisualizer() {
+            // Create bars for header visualizer
+            for (let i = 0; i < 40; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                bar.style.height = '5px';
+                headerVisualizer.appendChild(bar);
+            }
+            
+            // Start visualization
+            visualizeHeader();
+        }
+        
+        // Header background visualization function
+        function visualizeHeader() {
+            if (!isPlaying) {
+                // Reset bars when not playing
+                const bars = document.querySelectorAll('.visualizer-bar');
+                bars.forEach(bar => {
+                    bar.style.height = '5px';
+                });
+                requestAnimationFrame(visualizeHeader);
+                return;
+            }
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+            
+            const bars = document.querySelectorAll('.visualizer-bar');
+            for (let i = 0; i < bars.length; i++) {
+                // Use different frequency ranges for variety
+                const value = dataArray[i * 2] / 3;
+                bars[i].style.height = `${Math.max(5, value)}px`;
+            }
+            
+            requestAnimationFrame(visualizeHeader);
+        }
+        
+        // Populate the schedule list
+        function populateSchedule() {
+            scheduleList.innerHTML = '';
+            
+            SCHEDULE.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.className = 'schedule-item';
+                
+                const dateObj = new Date(`${item.date}T${item.time}`);
+                const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                const formattedTime = dateObj.toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                
+                listItem.innerHTML = `
+                    <div class="schedule-date">${formattedDate} at ${formattedTime}</div>
+                    <div class="schedule-title">${item.title}</div>
+                `;
+                
+                scheduleList.appendChild(listItem);
+            });
+        }
+        
+        // Calculate the next stream time
+        function calculateNextStream() {
+            const now = new Date();
+            
+            for (let item of SCHEDULE) {
+                const streamTime = new Date(`${item.date}T${item.time}`);
+                
+                if (streamTime > now) {
+                    nextStreamTime = streamTime;
+                    currentStreamTitle = item.title;
+                    break;
+                }
+            }
+            
+            // If no future streams found, use the first one from tomorrow
+            if (!nextStreamTime) {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                tomorrow.setHours(SCHEDULE[0].time.split(':')[0], SCHEDULE[0].time.split(':')[1], 0, 0);
+                nextStreamTime = tomorrow;
+                currentStreamTitle = SCHEDULE[0].title;
+            }
+        }
+        
+        // Start the countdown timer
+        function startCountdown() {
+            clearInterval(countdownInterval);
+            
+            countdownInterval = setInterval(() => {
+                const now = new Date();
+                const timeDiff = nextStreamTime - now;
+                
+                if (timeDiff <= 0) {
+                    // Stream time has arrived
+                    countdown.textContent = "00:00:00";
+                    clearInterval(countdownInterval);
+                    return;
+                }
+                
+                const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+                const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((timeDiff % (1000 * 60)) / 1000);
+                
+                countdown.textContent = 
+                    `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+        
+        // Check if it's time to play the stream
+        function checkStreamTime() {
+            const now = new Date();
+            
+            // Check if we're within 10 seconds of the stream time
+            if (nextStreamTime && Math.abs(nextStreamTime - now) < 10000 && !isPlaying) {
+                if (autoplayToggle.checked) {
+                    // This is a scheduled stream
+                    isScheduledStream = true;
+                    
+                    // Auto-play the stream
+                    audioElement.play().catch(e => {
+                        console.log("Autoplay prevented by browser. User interaction required.");
+                    });
+                }
+                
+                // Calculate next stream time
+                calculateNextStream();
+                startCountdown();
+            }
+        }
+        
+        // Initialize the application when the page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
