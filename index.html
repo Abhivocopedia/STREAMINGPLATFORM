@@ -472,7 +472,7 @@
     // ============================================
     const AUDIO_FILE_URL = "aud.mp3";
     const SCHEDULE = [
-        { date: "2025-09-26", time: "01:22", title: "Morning Stream" },
+        { date: "2025-09-26", time: "01:30", title: "Morning Stream" },
         { date: "2025-09-27", time: "07:00", title: "Morning Stream" },
         { date: "2025-09-28", time: "07:00", title: "Morning Stream" },
     ];
@@ -699,6 +699,22 @@
     }
 
     window.addEventListener('load', init);
+
+        // ✅ Unlock AudioContext on first interaction so scheduled autoplay can work
+window.addEventListener("click", () => {
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume();
+    console.log("🔓 AudioContext unlocked by user click.");
+  }
+});
+
+window.addEventListener("keydown", () => {
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume();
+    console.log("🔓 AudioContext unlocked by key press.");
+  }
+});
+
 </script>
 
 
