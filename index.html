@@ -513,7 +513,7 @@
         const SCHEDULE = [
             {
                 date: "2025-09-26", // YYYY-MM-DD format
-                time: "00:13",      // 24-hour format
+                time: "00:20",      // 24-hour format
                 title: "Daily Stream"
             },
             {
@@ -815,6 +815,19 @@
         
         // Initialize the application when the page loads
         window.addEventListener('load', init);
+        // ✅ Allow autoplay by resuming AudioContext after first click/tap
+window.addEventListener("click", () => {
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+});
+
+window.addEventListener("keydown", () => {
+  if (audioContext && audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+});
+
     </script>
 </body>
 </html>
