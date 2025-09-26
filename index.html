@@ -466,34 +466,223 @@
         </footer>
     </div>
     <script>
-
-        // ============================================
+// ============================================
 // CONFIGURATION
 // ============================================
 const AUDIO_FILE_URL = "aud1.mp3";
-
-// 📅 Schedule list (still used for countdown & titles)
 const SCHEDULE = [
-    { date: "2025-09-26", time: "08:30", title: "Morning Stream" },
+    { date: "2025-09-26", time: "07:40", title: "Morning Stream" },
     { date: "2025-09-27", time: "07:00", title: "Morning Stream" },
     { date: "2025-09-28", time: "07:00", title: "Morning Stream" },
 ];
 
-// 🕐 STREAM ACTIVE TIME WINDOW (24h format)
+// 🕐 STREAM ACTIVE WINDOW (24h)
 const STREAM_START_HOUR = 6;   // 06:00 AM
-const STREAM_END_HOUR = 24;    // 24:00 = midnight (00:00 next day)
+const STREAM_END_HOUR = 24;    // 24:00 = Midnight
 
+// ============================================
+// DOM ELEMENTS
+// ============================================
+const digitalClock = document.getElementById('digitalClock');
+const countdown = document.getElementById('countdown');
+const statusIndicator = document.getElementById('statusIndicator');
+const statusText = document.getElementById('statusText');
+const playBtn = document.getElementById('playBtn');
+const volumeSlider = document.getElementById('volumeSlider');
+const autoplayToggle = document.getElementById('autoplayToggle');
+const headerVisualizer = document.getElementById('headerVisualizer');
+const scheduleList = document.getElementById('scheduleList');
+const currentStream = document.getElementById('currentStream');
 
- // ============================================
-// STREAM START LOGIC (with time window)
+// ============================================
+// VARIABLES
+// ============================================
+let audioContext, audioElement, source, analyser;
+let isPlaying = false;
+let isScheduledStream = false;
+let nextStreamTime = null;
+let countdownInterval;
+let currentStreamTitle = "";
+
+// ============================================
+// INITIALIZE
+// ============================================
+function init() {
+    updateDigitalClock();
+    setInterval(updateDigitalClock, 1000);
+
+    setupAudio();
+    setupHeaderVisualizer();
+    populateSchedule();
+    calculateNextStream();
+    startCountdown();
+
+    playBtn.disabled = true;
+    playBtn.style.opacity = "0.5";
+    playBtn.style.cursor = "not-allowed";
+
+    setInterval(checkStreamTime, 1000);
+}
+
+function updateDigitalClock() {
+    const now = new Date();
+    digitalClock.textContent = now.toLocaleTimeString('en-US', { hour12: false });
+}
+
+// ============================================
+// AUDIO SETUP
+// ============================================
+function setupAudio() {
+    audioElement = new Audio(AUDIO_FILE_URL);
+    audioElement.loop = true;
+    audioElement.volume = volumeSlider.value / 100;
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    source = audioContext.createMediaElementSource(audioElement);
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 256;
+
+    source.connect(analyser);
+    analyser.connect(audioContext.destination);
+
+    audioElement.addEventListener('play', () => {
+        isPlaying = true;
+        playBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        statusIndicator.className = 'on-air';
+        statusText.textContent = isScheduledStream ? 'ON AIR - LIVE' : 'ON AIR - MANUAL PLAY';
+        currentStream.textContent = isScheduledStream ? currentStreamTitle : "Manual Playback";
+        headerVisualizer.classList.add('active');
+    });
+
+    audioElement.addEventListener('pause', resetStreamStatus);
+    audioElement.addEventListener('ended', resetStreamStatus);
+
+    playBtn.addEventListener('click', togglePlayback);
+    volumeSlider.addEventListener('input', updateVolume);
+}
+
+function resetStreamStatus() {
+    isPlaying = false;
+    playBtn.innerHTML = '<i class="fas fa-play"></i>';
+    statusIndicator.className = 'off-air';
+    statusText.textContent = 'OFF AIR';
+    currentStream.textContent = "No stream currently playing";
+    headerVisualizer.classList.remove('active');
+}
+
+function togglePlayback() {
+    if (audioContext.state === 'suspended') audioContext.resume();
+
+    if (isPlaying) {
+        // Pause only for user
+        audioElement.pause();
+    } else {
+        // Resume playback
+        audioElement.play().catch(e => console.log("Playback error:", e));
+    }
+}
+
+function updateVolume() {
+    audioElement.volume = volumeSlider.value / 100;
+}
+
+// ============================================
+// VISUALIZER
+// ============================================
+function setupHeaderVisualizer() {
+    for (let i = 0; i < 40; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'visualizer-bar';
+        bar.style.height = '5px';
+        headerVisualizer.appendChild(bar);
+    }
+    visualizeHeader();
+}
+
+function visualizeHeader() {
+    if (!isPlaying) {
+        document.querySelectorAll('.visualizer-bar').forEach(bar => bar.style.height = '5px');
+        requestAnimationFrame(visualizeHeader);
+        return;
+    }
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteFrequencyData(dataArray);
+
+    document.querySelectorAll('.visualizer-bar').forEach((bar, i) => {
+        const value = dataArray[i * 2] / 3;
+        bar.style.height = `${Math.max(5, value)}px`;
+    });
+
+    requestAnimationFrame(visualizeHeader);
+}
+
+// ============================================
+// SCHEDULE
+// ============================================
+function populateSchedule() {
+    scheduleList.innerHTML = '';
+    SCHEDULE.forEach(item => {
+        const li = document.createElement('li');
+        li.className = 'schedule-item';
+        const dateObj = new Date(`${item.date}T${item.time}`);
+        li.innerHTML = `
+            <div class="schedule-date">${dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })} 
+            at ${dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</div>
+            <div class="schedule-title">${item.title}</div>`;
+        scheduleList.appendChild(li);
+    });
+}
+
+function calculateNextStream() {
+    const now = new Date();
+    for (let item of SCHEDULE) {
+        const streamTime = new Date(`${item.date}T${item.time}`);
+        if (streamTime > now) {
+            nextStreamTime = streamTime;
+            currentStreamTitle = item.title;
+            break;
+        }
+    }
+    if (!nextStreamTime) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(SCHEDULE[0].time.split(':')[0], SCHEDULE[0].time.split(':')[1], 0, 0);
+        nextStreamTime = tomorrow;
+        currentStreamTitle = SCHEDULE[0].title;
+    }
+}
+
+// ============================================
+// COUNTDOWN
+// ============================================
+function startCountdown() {
+    clearInterval(countdownInterval);
+    countdownInterval = setInterval(() => {
+        const now = new Date();
+        const timeDiff = nextStreamTime - now;
+        if (timeDiff <= 0) {
+            countdown.textContent = "00:00:00";
+            clearInterval(countdownInterval);
+            return;
+        }
+        const h = Math.floor(timeDiff / 3600000).toString().padStart(2, '0');
+        const m = Math.floor((timeDiff % 3600000) / 60000).toString().padStart(2, '0');
+        const s = Math.floor((timeDiff % 60000) / 1000).toString().padStart(2, '0');
+        countdown.textContent = `${h}:${m}:${s}`;
+    }, 1000);
+}
+
+// ============================================
+// STREAM START LOGIC (With time window)
 // ============================================
 function checkStreamTime() {
     const now = new Date();
     const currentHour = now.getHours();
 
-    // ⏱️ Check if current time is OUTSIDE stream window
+    // ⏱️ Disable outside stream hours
     if (currentHour < STREAM_START_HOUR || currentHour >= STREAM_END_HOUR) {
-        // Disable playback outside streaming window
         playBtn.disabled = true;
         playBtn.style.opacity = "0.5";
         playBtn.style.cursor = "not-allowed";
@@ -502,58 +691,20 @@ function checkStreamTime() {
             audioElement.pause();
             audioElement.currentTime = 0;
         }
+
         statusText.textContent = "STREAM OFFLINE - Come back later";
-        currentStream.textContent = "Stream inactive now";
+        currentStream.textContent = "Stream inactive";
         headerVisualizer.classList.remove("active");
         countdown.textContent = "--:--:--";
         return;
     }
 
-    // ✅ Inside active stream time window — Enable button & countdown
+    // ✅ Enable inside stream window
     playBtn.disabled = false;
     playBtn.style.opacity = "1";
     playBtn.style.cursor = "pointer";
 
-    // ⏱️ Handle scheduled playback (optional)
-    if (nextStreamTime && Math.abs(nextStreamTime - now) < 10000 && !isPlaying) {
-        if (autoplayToggle.checked) {
-            isScheduledStream = true;
-            audioElement.play().catch(e => console.log("Autoplay prevented:", e));
-        } else {
-            if (!window.streamPopupShown) {
-                window.streamPopupShown = true;
-                alert("🔊 Stream is live! Click the play button to listen.");
-            }
-        }
-        calculateNextStream();
-        startCountdown();
-    }
-}
-
-
-    // ⏱️ Disable play button after 00:00 (midnight)
-    if (currentHour === 0 && currentMinutes === 0 && currentSeconds >= 1) {
-        playBtn.disabled = true;
-        playBtn.style.opacity = "0.5";
-        playBtn.style.cursor = "not-allowed";
-
-        // Stop audio completely after midnight
-        if (audioElement && !audioElement.paused) {
-            audioElement.pause();
-            audioElement.currentTime = 0;
-        }
-        statusText.textContent = "STREAM ENDED - COME BACK TOMORROW";
-        currentStream.textContent = "Stream offline";
-        headerVisualizer.classList.remove("active");
-        return;
-    }
-
-    // ✅ Enable play button during the day
-    playBtn.disabled = false;
-    playBtn.style.opacity = "1";
-    playBtn.style.cursor = "pointer";
-
-    // 🕐 Check if scheduled time reached (only needed if you still want scheduled autoplay)
+    // 📅 Scheduled start
     if (nextStreamTime && Math.abs(nextStreamTime - now) < 10000 && !isPlaying) {
         if (autoplayToggle.checked) {
             isScheduledStream = true;
@@ -570,30 +721,10 @@ function checkStreamTime() {
 }
 
 // ============================================
-// UPDATED TOGGLE LOGIC - USER CONTROL ONLY
+// INIT + AUDIO UNLOCK
 // ============================================
-function togglePlayback() {
-    if (audioContext.state === 'suspended') audioContext.resume();
+window.addEventListener('load', init);
 
-    if (isPlaying) {
-        // ✋ Pause ONLY for the user, but not stop the stream itself
-        audioElement.pause();
-    } else {
-        // ▶️ Resume continuous loop playback
-        audioElement.play().catch(e => console.log("Playback error:", e));
-    }
-}
-
-// ============================================
-// FORCE LOOP - IGNORE END
-// ============================================
-audioElement?.addEventListener("ended", () => {
-    console.log("🔁 Audio ended — restarting automatically...");
-    audioElement.currentTime = 0;
-    audioElement.play().catch(err => console.error("Auto-restart failed:", err));
-});
-
-// ✅ Unlock AudioContext on user interaction
 window.addEventListener("click", () => {
     if (audioContext && audioContext.state === "suspended") {
         audioContext.resume();
@@ -606,6 +737,14 @@ window.addEventListener("keydown", () => {
         console.log("🔓 AudioContext unlocked by key press.");
     }
 });
-    </script>
+
+// 🔁 Always loop
+audioElement?.addEventListener("ended", () => {
+    console.log("🔁 Audio ended — restarting automatically...");
+    audioElement.currentTime = 0;
+    audioElement.play().catch(err => console.error("Auto-restart failed:", err));
+});
+</script>
+
 </body>
 </html>
