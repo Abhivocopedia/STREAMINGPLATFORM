@@ -472,7 +472,7 @@
     // ============================================
     const AUDIO_FILE_URL = "aud.mp3";
     const SCHEDULE = [
-        { date: "2025-09-26", time: "07:05", title: "Morning Stream" },
+        { date: "2025-09-26", time: "08:00", title: "Morning Stream" },
         { date: "2025-09-27", time: "07:00", title: "Morning Stream" },
         { date: "2025-09-28", time: "07:00", title: "Morning Stream" },
     ];
@@ -532,7 +532,7 @@
     // ============================================
     function setupAudio() {
         audioElement = new Audio(AUDIO_FILE_URL);
-        audioElement.loop = false;
+        audioElement.loop = true;
         audioElement.volume = volumeSlider.value / 100;
 
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -714,6 +714,20 @@ window.addEventListener("keydown", () => {
     console.log("🔓 AudioContext unlocked by key press.");
   }
 });
+
+// 🔁 Force continuous looping after first scheduled playback
+audioElement?.addEventListener("ended", () => {
+  console.log("🔁 Audio ended — restarting automatically...");
+  audioElement.currentTime = 0;
+  audioElement.play().catch(err => console.error("Auto-restart failed:", err));
+});
+
+// 🧠 Also disable pause button manually — ignore togglePlayback if we want always-playing
+playBtn.removeEventListener("click", togglePlayback);
+playBtn.addEventListener("click", () => {
+  console.log("⏯️ Play button disabled — audio will keep looping automatically.");
+});
+
 
 </script>
 
